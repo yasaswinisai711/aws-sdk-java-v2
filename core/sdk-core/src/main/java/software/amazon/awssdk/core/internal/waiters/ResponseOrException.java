@@ -113,6 +113,10 @@ public interface ResponseOrException<R> {
     final class Response<R> implements ResponseOrException<R> {
         private final R value;
 
+        public R getValue() {
+            return this.value;
+        }
+
         public Response(R value) {
             Validate.notNull(value, "Value for Response must not be null");
             this.value = value;
@@ -174,6 +178,10 @@ public interface ResponseOrException<R> {
     final class ExceptionResponse<R> implements ResponseOrException<R> {
         private final Throwable throwable;
 
+        public Throwable getThrowable() {
+            return this.throwable;
+        }
+
         public ExceptionResponse(Throwable throwable) {
             this.throwable = throwable;
         }
@@ -231,4 +239,3 @@ public interface ResponseOrException<R> {
         }
     }
 }
-
