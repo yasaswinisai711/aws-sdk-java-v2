@@ -60,7 +60,7 @@ public class ImdsSurfaceAreaReviewDemo {
         server.stubFor(get(urlPathEqualTo("/latest/meta-data/value")).willReturn(
             aResponse().withBody("key1=value1\nkey2=value2")));
         server.stubFor(get(urlPathEqualTo("/latest/meta-data/json")).willReturn(
-            aResponse().withBody("{\"jsonKey1\":\"jsonValue1\", \"jsonKey2\":\"jsonValue2\"}")));
+            aResponse().withBody("{\"jsonKey1\":\"jsonValue1\", \"potato\":\"tasty\"}")));
         server.stubFor(get(urlPathEqualTo("/errors/unknown-path")).willReturn(
             aResponse().withStatus(404).withBody("404 Not Found")));
         server.stubFor(get(urlPathEqualTo("/errors/server-error")).willReturn(
@@ -114,6 +114,7 @@ public class ImdsSurfaceAreaReviewDemo {
         System.out.printf("response as List: %s%n", response.asList());
         MetadataResponse jsonResponse = client.get("/latest/meta-data/json");
         System.out.printf("response as Json: %s%n", jsonResponse.asDocument());
+        System.out.printf("    potato: %s%n", jsonResponse.asDocument().asMap().get("potato"));
 
         // ===========================
         // Errors
@@ -189,10 +190,12 @@ public class ImdsSurfaceAreaReviewDemo {
         CompletableFuture<MetadataResponse> jsonFuture = client.get("/latest/meta-data/json");
         jsonFuture.thenAccept(jsonResponse -> {
             System.out.printf("response as Json: %s%n", jsonResponse.asDocument());
+            System.out.printf("    potato: %s%n", jsonResponse.asDocument().asMap().get("potato"));
         });
 
         future.join();
         jsonFuture.join();
+
 
         // ===========================
         // Errors
@@ -220,7 +223,7 @@ public class ImdsSurfaceAreaReviewDemo {
         // note: we could .join() the future to wait for them to finish, but it would throw an exception, as those future will be
         // completed exceptionally. Here instead, just for fun and for demonstration purpose, we can manually wait for the
         // future to finish. This shows that the call to the .get(...) method actually starts the request process and
-        // eventually completes in a background thread without having to call .join() for them to complete.
+        // eventually completes in a background thread without having to call .join().
         waitToComplete(errorFuture, serverErrorFuture, invalidPathFuture);
     }
 
