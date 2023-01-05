@@ -64,7 +64,7 @@
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>http-client-spi</artifactId>
             <version>${awsjavasdk.version}</version>
-            <scope>compile</scope>
+<!--            <scope>compile</scope>--> <!-- commented only for surface area review -->
         </dependency>
         <dependency>
             <groupId>nl.jqno.equalsverifier</groupId>
@@ -80,7 +80,7 @@
         <dependency>
             <groupId>com.github.tomakehurst</groupId>
             <artifactId>wiremock-jre8</artifactId>
-            <scope>test</scope>
+<!--            <scope>test</scope>--> <!-- commented only for surface area review -->
         </dependency>
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
