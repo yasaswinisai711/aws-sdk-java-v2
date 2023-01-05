@@ -23,7 +23,10 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import java.net.URI;
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Future;
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
 import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient;
 
@@ -125,7 +128,7 @@ public class ImdsSurfaceAreaReviewDemo {
 
         // Malformed URI
         try {
-            MetadataResponse errorResponse = client.get("invalid/path");
+            MetadataResponse errorResponse = client.get("invalid path");
         } catch (Exception e) {
             System.err.printf("[ERROR] %s%n", e.getMessage());
             // e.printStackTrace();
@@ -194,40 +197,49 @@ public class ImdsSurfaceAreaReviewDemo {
         // ===========================
         // Errors
 
-        // note: we could .join() the future to wait for them to finish, but it would throw an exception, as those future will be
-        // completed exceptionally. Here instead, just for fun and for demonstration purpose, we can manually wait for the
-        // future to finish. This shows that the call to the .get(...) method actually starts the request process and
-        // eventually completes in a background thread.
-
         // 404
         CompletableFuture<MetadataResponse> errorFuture = client.get("/errors/unknown-path");
         errorFuture.whenComplete((res, err) -> {
             System.err.printf("[ERROR] %s%n", err.getMessage());
             // err.printStackTrace();
         });
-        // manually wait for future to complete
-        waitToComplete(errorFuture);
 
-        // 404
+        // 500
         CompletableFuture<MetadataResponse> serverErrorFuture = client.get("/errors/server-error");
         serverErrorFuture.whenComplete((res, err) -> {
             System.err.printf("[ERROR] %s%n", err.getMessage());
             // err.printStackTrace();
         });
-        waitToComplete(serverErrorFuture);
 
+        CompletableFuture<MetadataResponse> invalidPathFuture = client.get("invalid path");
+        invalidPathFuture.whenComplete((res, err) -> {
+            System.err.printf("[ERROR] %s%n", err.getMessage());
+            // err.printStackTrace();
+        });
+
+        // note: we could .join() the future to wait for them to finish, but it would throw an exception, as those future will be
+        // completed exceptionally. Here instead, just for fun and for demonstration purpose, we can manually wait for the
+        // future to finish. This shows that the call to the .get(...) method actually starts the request process and
+        // eventually completes in a background thread without having to call .join() for them to complete.
+        waitToComplete(errorFuture, serverErrorFuture, invalidPathFuture);
     }
 
-    void waitToComplete(CompletableFuture<?> future) {
-        if (!future.isDone()) {
-            while (!future.isDone()) {
+    void waitToComplete(Future<?> ...futures) {
+        List<Future<?>> futureList = Arrays.asList(futures);
+        if (!allCompleted(futureList)) {
+            while (!allCompleted(futureList)) {
                 try {
                     System.out.println("waiting...");
                     Thread.sleep(200);
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
+
             }
         }
+    }
+
+    private boolean allCompleted(List<Future<?>> futures) {
+        return futures.stream().allMatch(Future::isDone);
     }
 }
