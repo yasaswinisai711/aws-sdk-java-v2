@@ -24,16 +24,24 @@ class IntegrationTest {
 
     @Test
     void integrationTest() {
+        System.out.println("===== running sync Ec2 Metadata client test =====");
+        System.out.println("fetching '/latest/meta-data/'");
         Ec2MetadataClient client = Ec2MetadataClient.create();
         Ec2MetadataResponse response = client.get("/latest/meta-data/");
         System.out.println(response);
+        System.out.println("DONE");
+        System.out.println();
     }
 
     @Test
     void asyncIntegrationTest() {
+        System.out.println("===== running async Ec2 Metadata client test =====");
+        System.out.println("fetching '/latest/meta-data/'");
         Ec2MetadataAsyncClient client = Ec2MetadataAsyncClient.create();
         Ec2MetadataResponse response = client.get("/latest/meta-data/").join();
         System.out.println(response);
+        System.out.println("DONE");
+        System.out.println();
     }
 
 }
