@@ -30,13 +30,12 @@ import java.util.Map;
 import java.util.Objects;
 import org.assertj.core.api.Assertions;
 import org.junit.Rule;
-import org.junit.Test;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 import org.junit.rules.ExpectedException;
-import software.amazon.awssdk.enhanced.dynamodb.AttributeConverterProvider;
 import software.amazon.awssdk.enhanced.dynamodb.AttributeValueType;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
@@ -244,7 +243,7 @@ public class BasicCrudTest extends LocalDynamoDbSyncTestBase {
                                                                                           .addIndexPartitionKey(TableMetadata.primaryIndexName(),
                                                                                                                 "id",
                                                                                                                 AttributeValueType.S)
-                                                                                          .addIndexSortKey("gsi_1", "sort", AttributeValueType.S)
+                                                                                          .addIndexSortKey(TableMetadata.primaryIndexName(), "sort", AttributeValueType.S)
                                                                                           .attributeConverterProviders(defaultProvider())
                                                                                           .build());
 
@@ -275,48 +274,59 @@ public class BasicCrudTest extends LocalDynamoDbSyncTestBase {
     @ParameterizedTest
     @ArgumentsSource(EnhancedDocumentTestData.class)
     public void putThenGetItemUsingKey(TestData testData) {
-
-
-        EnhancedDocument enhancedDocument = testData.getEnhancedDocument().toBuilder()
-                                         .putString("id", "id-value")
-                                         .putString("sort", "sort-value").build();
-
+        EnhancedDocument enhancedDocument = appendKeysToDoc(testData);
         docMappedtable.putItem(enhancedDocument);
+        Map<String, AttributeValue> key = appendKeysToAttributeMap(testData);
+        GetItemResponse item = lowLevelClient.getItem(r -> r.key(key).tableName(tableName));
+        Assertions.assertThat(item.item()).isEqualTo(enhancedDocument.toMap());
+    }
+
+    private static EnhancedDocument appendKeysToDoc(TestData testData) {
+        EnhancedDocument enhancedDocument = testData.getEnhancedDocument().toBuilder()
+                                                    .putString("id", "id-value")
+                                                    .putString("sort", "sort-value").build();
+        return enhancedDocument;
+    }
+
+    private static Map<String, AttributeValue> appendKeysToAttributeMap(TestData testData) {
         Map<String, AttributeValue> key = new LinkedHashMap<>();
         key.put("id", AttributeValue.fromS("id-value"));
-        testData.getDdbItemMap().put("id", AttributeValue.fromS("id-value"));
         key.put("sort", AttributeValue.fromS("sort-value"));
+        return key;
+    }
+
+    private static void appendKeysToTestDataAttributeMap(TestData testData) {
+        testData.getDdbItemMap().put("id", AttributeValue.fromS("id-value"));
         testData.getDdbItemMap().put("sort", AttributeValue.fromS("sort-value"));
-
-
-        GetItemResponse item = lowLevelClient.getItem(r -> r.key(key).tableName(tableName));
-        Assertions.assertThat(item.item()).isEqualTo(testData.getDdbItemMap());
+        return ;
     }
 
     @ParameterizedTest
     @ArgumentsSource(EnhancedDocumentTestData.class)
-    public void putThenGetItemUsingKeyItem() {
-        Record record = new Record()
-                              .setId("id-value")
-                              .setSort("sort-value")
-                              .setAttribute("one")
-                              .setAttribute2("two")
-                              .setAttribute3("three");
+    public void putThenGetItemUsingKeyItem(TestData testData) {
+        EnhancedDocument enhancedDocument = appendKeysToDoc(testData);
 
-        mappedTable.putItem(r -> r.item(record));
+        System.out.println("enhancedDocument " +enhancedDocument.toJson());
 
-        Record keyItem = new Record();
-        keyItem.setId("id-value");
-        keyItem.setSort("sort-value");
 
-        Record result = mappedTable.getItem(keyItem);
+        docMappedtable.putItem(r -> r.item(enhancedDocument));
 
+
+        EnhancedDocument result = docMappedtable.getItem(EnhancedDocument.builder()
+                                                             .attributeConverterProviders(testData.getAttributeConverterProvider())
+                                                                         .putString("id", "id-value")
+                                                                         .putString("sort", "sort-value")
+                                                                         .build());
+
+        appendKeysToTestDataAttributeMap(testData);
+        Assertions.assertThat(result.toMap()).isEqualTo(enhancedDocument.toMap());
+        Assertions.assertThat(result.toMap()).isEqualTo(testData.getDdbItemMap());
     }
 
     @Test
     public void getNonExistentItem() {
-        Record result = mappedTable.getItem(r -> r.key(k -> k.partitionValue("id-value").sortValue("sort-value")));
-        assertThat(result, is(nullValue()));
+        EnhancedDocument item = docMappedtable.getItem(r -> r.key(k -> k.partitionValue("id-value").sortValue("sort-value")));
+        Assertions.assertThat(item).isNull();
     }
 
     @Test

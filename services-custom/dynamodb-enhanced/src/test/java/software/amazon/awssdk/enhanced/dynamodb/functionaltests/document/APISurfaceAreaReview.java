@@ -241,6 +241,7 @@ public class APISurfaceAreaReview extends LocalDynamoDbSyncTestBase {
         assertThat(simpleDoc.getBoolean("booleanKey")).isTrue();
         assertThat(simpleDoc.getJson("jsonKey")).isEqualTo("{\"1\": [\"a\", \"b\", \"c\"],\"2\": 1}");
         assertThat(simpleDoc.getStringSet("stingSet")).isEqualTo(Stream.of("a", "b", "c").collect(Collectors.toSet()));
+        assertThat(simpleDoc.getList("stingSet", EnhancedType.of(String.class))).isEqualTo(Stream.of("a", "b", "c").collect(Collectors.toList()));
 
         assertThat(simpleDoc.getNumberSet("numberSet")
                             .stream().map(n -> n.intValue()).collect(Collectors.toSet()))

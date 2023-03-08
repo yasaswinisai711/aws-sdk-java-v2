@@ -127,6 +127,7 @@ public class DocumentTableSchemaTest {
     @ParameterizedTest
     @ArgumentsSource(EnhancedDocumentTestData.class)
     void validate_DocumentTableSchema_mapToItem(TestData testData) {
+        System.out.println("testData "+ testData.getScenario());
         /**
          * The builder method internally creates a AttributeValueMap which is saved to the ddb, if this matches then
          * the document is as expected
@@ -136,10 +137,9 @@ public class DocumentTableSchemaTest {
         Assertions.assertThat(
             documentTableSchema.mapToItem(testData.getDdbItemMap()).toMap()).isEqualTo(testData.getEnhancedDocument()
                                                                                                .toMap());
-        // TODO : order mismatch ??
-        //
-        // Assertions.assertThat(
-        //     documentTableSchema.mapToItem(testData.getDdbItemMap()).toJson()).isEqualTo(testData.getJson());
+
+        Assertions.assertThat(
+            documentTableSchema.mapToItem(testData.getDdbItemMap()).toJson()).isEqualTo(testData.getJson());
     }
 
 
