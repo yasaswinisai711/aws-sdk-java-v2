@@ -17,10 +17,12 @@ package software.amazon.awssdk.enhanced.dynamodb.document;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.amazonaws.services.dynamodbv2.document.Item;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 import software.amazon.awssdk.core.SdkBytes;
@@ -151,5 +153,13 @@ public class ParameterizedDocumentTest {
         }
 
 
+    @ParameterizedTest
+    @ArgumentsSource(EnhancedDocumentTestData.class)
+    void testV1VsV2(TestData testData){
+
+        Assertions.assertThat(EnhancedDocument.fromJson(testData.getJson()).toJson())
+            .isEqualTo(Item.fromJSON(testData.getJson()).toJSON());
+
+    }
 
 }
