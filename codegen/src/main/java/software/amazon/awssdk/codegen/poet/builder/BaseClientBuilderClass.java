@@ -529,7 +529,7 @@ public class BaseClientBuilderClass implements ClassSpec {
     }
 
     private CodeBlock serviceSpecificHttpConfigMethodBody(String serviceDefaultFqcn, boolean supportsH2) {
-        CodeBlock.Builder builder =  CodeBlock.builder();
+        CodeBlock.Builder builder = CodeBlock.builder();
 
         if (serviceDefaultFqcn != null) {
             builder.addStatement("$T result = $T.defaultHttpConfig()",
