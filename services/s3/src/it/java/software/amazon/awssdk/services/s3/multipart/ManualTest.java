@@ -20,13 +20,19 @@ import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.services.s3.model.CopyObjectResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 
 /**
- * run
- *     `ada credentials update --account <YOUR_PERSONAL_ACCOUNT> --provider=isengard --role=Admin --once`
+ * run:
+ * <p>
+ *     {@code ada credentials update --account <YOUR_PERSONAL_ACCOUNT>} --provider=isengard --role=Admin --once}
+ * </p>
  * first then run the test in intellij or with maven:
- *     `mvn clean test -Dtest=ManualTest -pl :s3`
+ * <p>
+ *     {@code mvn clean test -Dtest=ManualTest -pl :s3}
+ * </p>
+ *
  *
  */
 class ManualTest {
@@ -56,7 +62,7 @@ class ManualTest {
         System.out.println(response.toString());
     }
 
-    // @Test
+    @Test
     void testMinimumConfig() throws Exception {
         S3AsyncClient client = S3AsyncClient
             .builder()
@@ -65,12 +71,23 @@ class ManualTest {
             .region(Region.US_WEST_2)
             .build();
 
-        CompletableFuture<PutObjectResponse> responseFuture = client.putObject(
-            req -> req.bucket(TEST_BUCKET).key("test-multipart-upload.txt"),
-            Paths.get(TEST_FILE_PATH));
+        CompletableFuture<CopyObjectResponse> responseFuture = client.copyObject(
+            c -> c.sourceBucket(TEST_BUCKET).destinationBucket("olapplin-tmp-upload")
+                .sourceKey("test-multipart-upload.txt").destinationKey("test-multipart-upload-copy.txt"));
 
-        PutObjectResponse response = responseFuture.get();
+        CopyObjectResponse response = responseFuture.get();
         System.out.println(response.toString());
-
     }
+
+   @Test
+   void getObject_isDisabled() {
+       S3AsyncClient client = S3AsyncClient
+           .builder()
+           .multipartConfiguration(MultipartConfiguration.create()) // will enable multipart
+           // .multipartConfiguration(c -> c.multipartEnabled(true)) // does the same
+           .region(Region.US_WEST_2)
+           .build();
+
+
+   }
 }
