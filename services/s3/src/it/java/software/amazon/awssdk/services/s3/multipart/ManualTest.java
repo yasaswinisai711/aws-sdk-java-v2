@@ -15,6 +15,8 @@
 
 package software.amazon.awssdk.services.s3.multipart;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
 import java.nio.file.Paths;
 import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.Test;
@@ -37,20 +39,29 @@ import software.amazon.awssdk.services.s3.model.PutObjectResponse;
  */
 class ManualTest {
 
+    //// change these value for your setup
     private static final String TEST_FILE_PATH = //// change me
-        "/Users/olapplin/Develop/GitHub/aws-sdk-java-v2/services/s3/src/main/resources/codegen-resources/service-2.json";
+        // "/Users/olapplin/Develop/GitHub/aws-sdk-java-v2/services/s3/src/main/resources/codegen-resources/service-2.json";
+        "/Users/olapplin/Develop/512M";
+
+    private static final String TEST_FILE_PATH_DESTINATION = //// change me
+        "/Users/olapplin/Develop/destination-key.txt";
+
     private static final String TEST_BUCKET = //// change me
         "olapplin-test-bucket";
 
+    private static final String TEST_BUCKET_DESTINATION = //// change me
+        "olapplin-test-2-bucket";
+
     @Test
-    void testWithFullConfig() throws Exception {
+    void putObject_withFullConfig() throws Exception {
         S3AsyncClient client = S3AsyncClient
             .builder()
             .multipartConfiguration(c -> c.multipartEnabled(true) // default value
-                                          .minimumPartSizeInBytes(8L * 1024 * 1024) // default value
-                                          .thresholdInBytes(8L * 1024 * 1024) // default value
-                                          .maximumMemoryUsageInBytes(16L * 1024 * 1024) // default value
-                                          .multipartDownloadType(MultipartDownloadType.PART)) // unused
+                                          .minimumPartSizeInBytes(128L * 1024 * 1024)
+                                          .thresholdInBytes(8L * 1024 * 1024)
+                                          .maximumMemoryUsageInBytes(128L * 3 * 1024 * 1024)
+                                          .multipartDownloadType(MultipartDownloadType.PART))
             .region(Region.US_WEST_2)
             .build();
 
@@ -63,7 +74,7 @@ class ManualTest {
     }
 
     @Test
-    void testMinimumConfig() throws Exception {
+    void copyObject_withMinimumConfig() throws Exception {
         S3AsyncClient client = S3AsyncClient
             .builder()
             .multipartConfiguration(MultipartConfiguration.create()) // will enable multipart
@@ -72,22 +83,26 @@ class ManualTest {
             .build();
 
         CompletableFuture<CopyObjectResponse> responseFuture = client.copyObject(
-            c -> c.sourceBucket(TEST_BUCKET).destinationBucket("olapplin-tmp-upload")
-                .sourceKey("test-multipart-upload.txt").destinationKey("test-multipart-upload-copy.txt"));
+            c -> c.sourceBucket(TEST_BUCKET).destinationBucket(TEST_BUCKET_DESTINATION)
+                  .sourceKey("test-multipart-upload.txt").destinationKey("test-multipart-upload-copy.txt"));
 
         CopyObjectResponse response = responseFuture.get();
         System.out.println(response.toString());
     }
 
-   @Test
-   void getObject_isDisabled() {
-       S3AsyncClient client = S3AsyncClient
-           .builder()
-           .multipartConfiguration(MultipartConfiguration.create()) // will enable multipart
-           // .multipartConfiguration(c -> c.multipartEnabled(true)) // does the same
-           .region(Region.US_WEST_2)
-           .build();
+    @Test
+    void getObject_shouldThrowException() {
+        S3AsyncClient client = S3AsyncClient
+            .builder()
+            .multipartConfiguration(MultipartConfiguration.create()) // will enable multipart
+            // .multipartConfiguration(c -> c.multipartEnabled(true)) // does the same
+            .region(Region.US_WEST_2)
+            .build();
 
-
-   }
+        assertThatThrownBy(() -> client.getObject(
+            b -> b.bucket(TEST_BUCKET)
+                  .key("test-multipart-upload.txt"),
+            Paths.get(TEST_FILE_PATH_DESTINATION))).as("Multipart download currently not supported.")
+                                                   .isInstanceOf(UnsupportedOperationException.class);
+    }
 }
