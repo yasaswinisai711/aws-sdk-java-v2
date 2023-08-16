@@ -25,6 +25,7 @@ import software.amazon.awssdk.crt.CRT;
 import software.amazon.awssdk.crt.http.HttpHeader;
 import software.amazon.awssdk.crt.s3.S3FinishedResponseContext;
 import software.amazon.awssdk.crt.s3.S3MetaRequest;
+import software.amazon.awssdk.crt.s3.S3MetaRequestProgress;
 import software.amazon.awssdk.crt.s3.S3MetaRequestResponseHandler;
 import software.amazon.awssdk.http.SdkCancellationException;
 import software.amazon.awssdk.http.SdkHttpResponse;
@@ -95,6 +96,10 @@ public final class S3CrtResponseHandlerAdapter implements S3MetaRequestResponseH
         } else {
             onSuccessfulResponseComplete();
         }
+    }
+
+    @Override
+    public void onProgress(final S3MetaRequestProgress progress) {
     }
 
     private void onSuccessfulResponseComplete() {

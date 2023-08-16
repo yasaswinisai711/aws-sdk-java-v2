@@ -259,6 +259,7 @@ public final class FileAsyncRequestBody implements AsyncRequestBody {
             inputChannel.read(buffer, position.get(), buffer, new CompletionHandler<Integer, ByteBuffer>() {
                 @Override
                 public void completed(Integer result, ByteBuffer attachment) {
+                    log.info(() -> String.format("Completed File Subscription, read %d from file %s", result, path));
                     try {
                         if (result > 0) {
                             attachment.flip();
