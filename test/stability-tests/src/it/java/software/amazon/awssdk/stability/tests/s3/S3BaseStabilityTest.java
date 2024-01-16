@@ -19,21 +19,28 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.IntFunction;
 import org.apache.commons.lang3.RandomStringUtils;
+import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.core.retry.RetryPolicy;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.core.sync.ResponseTransformer;
 import software.amazon.awssdk.http.apache.ApacheHttpClient;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteBucketRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.NoSuchBucketException;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.stability.tests.exceptions.StabilityTestsRetryableException;
@@ -46,8 +53,8 @@ import software.amazon.awssdk.utils.Md5Utils;
 
 public abstract class S3BaseStabilityTest extends AwsTestBase {
     private static final Logger log = Logger.loggerFor(S3BaseStabilityTest.class);
-    protected static final int CONCURRENCY = 100;
-    protected static final int TOTAL_RUNS = 50;
+    protected static final int CONCURRENCY = 1000;
+    protected static final int TOTAL_RUNS = 1;
 
     protected static final String LARGEST_KEY_NAME = "16MB";
 
@@ -67,7 +74,8 @@ public abstract class S3BaseStabilityTest extends AwsTestBase {
                                  .httpClientBuilder(ApacheHttpClient.builder()
                                                                     .maxConnections(CONCURRENCY))
                                  .credentialsProvider(CREDENTIALS_PROVIDER_CHAIN)
-                                 .overrideConfiguration(b -> b.apiCallTimeout(Duration.ofMinutes(10)))
+                                 .overrideConfiguration(b -> b.apiCallTimeout(Duration.ofMinutes(10))
+                                                              .retryPolicy(RetryPolicy.none()))
                                  .build();
     }
 
@@ -89,8 +97,8 @@ public abstract class S3BaseStabilityTest extends AwsTestBase {
         assertThat(md5Upload).isEqualTo(md5Download);
     }
 
-    @RetryableTest(maxRetries = 3, retryableException = StabilityTestsRetryableException.class)
-    public void putObject_getObject_highConcurrency() {
+    @RetryableTest(maxRetries = 1, retryableException = StabilityTestsRetryableException.class)
+    public void putObject_getObject_highConcurrency() throws IOException {
         putObject();
         getObject();
     }
@@ -160,12 +168,13 @@ public abstract class S3BaseStabilityTest extends AwsTestBase {
         }
     }
 
-    protected void putObject() {
-        byte[] bytes = RandomStringUtils.randomAlphanumeric(10_000).getBytes();
+    protected void putObject() throws IOException {
+        File file = RandomTempFile.randomUncreatedFile();
+        Files.write(file.toPath(), RandomStringUtils.randomAlphanumeric(1024 * 1024 * 3).getBytes(StandardCharsets.UTF_8));
 
         IntFunction<CompletableFuture<?>> future = i -> CompletableFuture.supplyAsync(() -> {
             String keyName = computeKeyName(i);
-            testClient.putObject(b -> b.bucket(getTestBucketName()).key(keyName), RequestBody.fromBytes(bytes));
+            testClient.putObject(b -> b.bucket(getTestBucketName()).key(keyName), RequestBody.fromFile(file));
 
             return null;
         }, futureThreadPool);
@@ -181,10 +190,18 @@ public abstract class S3BaseStabilityTest extends AwsTestBase {
 
     protected void getObject() {
         IntFunction<CompletableFuture<?>> future = i -> CompletableFuture.supplyAsync(() -> {
+            int SMALL_FILE_SIZE = 1024 * 1024 * 1;
+            byte[] buffer = new byte[SMALL_FILE_SIZE];
             String keyName = computeKeyName(i);
-            Path path = RandomTempFile.randomUncreatedFile().toPath();
-            testClient.getObject(b -> b.bucket(getTestBucketName()).key(keyName), ResponseTransformer.toFile(path));
+            try(ResponseInputStream<GetObjectResponse> responseInputStream =
+                testClient.getObject(GetObjectRequest.builder().bucket(getTestBucketName()).key(keyName).build())) {
+                responseInputStream.read(buffer, 0, SMALL_FILE_SIZE );
+                responseInputStream.read(buffer, 0, SMALL_FILE_SIZE );
+                responseInputStream.read(buffer, 0, SMALL_FILE_SIZE );
 
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
             return null;
         }, futureThreadPool);
 

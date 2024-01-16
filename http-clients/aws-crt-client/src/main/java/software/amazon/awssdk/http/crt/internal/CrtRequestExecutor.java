@@ -74,6 +74,10 @@ public final class CrtRequestExecutor {
                 return;
             }
 
+            if (!crtConn.isOpen()) {
+                log.error(() -> "Connection closed already!");
+            }
+
             executeRequest(executionContext, requestFuture, crtConn);
         });
 
