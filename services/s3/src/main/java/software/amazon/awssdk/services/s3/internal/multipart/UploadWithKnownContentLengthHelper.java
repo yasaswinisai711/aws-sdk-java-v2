@@ -43,6 +43,7 @@ import software.amazon.awssdk.services.s3.model.Part;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.services.s3.model.UploadPartRequest;
+import software.amazon.awssdk.services.s3.multipart.PausibleUpload;
 import software.amazon.awssdk.services.s3.paginators.ListPartsPublisher;
 import software.amazon.awssdk.utils.Logger;
 import software.amazon.awssdk.utils.Pair;
@@ -195,7 +196,7 @@ public final class UploadWithKnownContentLengthHelper {
                                               PutObjectRequest putObjectRequest) {
         PauseObservable pauseObservable =
             putObjectRequest.overrideConfiguration().get().executionAttributes().getAttribute(PAUSE_OBSERVABLE);
-        pauseObservable.setSubscriber(subscriber);
+        pauseObservable.setPausibleUpload(new DefaultPausibleUpload(subscriber));
     }
 
     private static final class MpuRequestContext {
@@ -218,7 +219,21 @@ public final class UploadWithKnownContentLengthHelper {
         }
     }
 
-    public class KnownContentLengthAsyncRequestBodySubscriber implements Subscriber<AsyncRequestBody> {
+    private static final class DefaultPausibleUpload implements PausibleUpload {
+
+        private KnownContentLengthAsyncRequestBodySubscriber subscriber;
+
+        public DefaultPausibleUpload(KnownContentLengthAsyncRequestBodySubscriber subscriber) {
+            this.subscriber = subscriber;
+        }
+
+        @Override
+        public S3ResumeToken pause() {
+            return subscriber.pause();
+        }
+    }
+
+    private class KnownContentLengthAsyncRequestBodySubscriber implements Subscriber<AsyncRequestBody> {
 
         /**
          * The number of AsyncRequestBody has been received but yet to be processed

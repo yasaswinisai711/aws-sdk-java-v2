@@ -16,21 +16,22 @@
 package software.amazon.awssdk.services.s3.internal.multipart;
 
 import software.amazon.awssdk.annotations.SdkInternalApi;
+import software.amazon.awssdk.services.s3.multipart.PausibleUpload;
 
 @SdkInternalApi
 public class PauseObservable {
 
-    private volatile UploadWithKnownContentLengthHelper.KnownContentLengthAsyncRequestBodySubscriber subscriber;
+    private volatile PausibleUpload pausibleUpload;
 
-    public void setSubscriber(UploadWithKnownContentLengthHelper.KnownContentLengthAsyncRequestBodySubscriber subscriber) {
-        this.subscriber = subscriber;
+    public void setPausibleUpload(PausibleUpload pausibleUpload) {
+        this.pausibleUpload = pausibleUpload;
     }
 
     public S3ResumeToken pause() {
         // subscriber will not be set for single part uploads
-        if (subscriber == null) {
+        if (pausibleUpload == null) {
             return null;
         }
-        return subscriber.pause();
+        return pausibleUpload.pause();
     }
 }
