@@ -23,6 +23,8 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Subscriber;
@@ -38,6 +40,7 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.utils.Logger;
 
 // WIP - please ignore for now, only used in manually testing
@@ -59,7 +62,24 @@ class MultipartDownloadIntegrationTest {
                                .build();
     }
 
-    @Test
+    // @Test
+    void testDownloadSinglePartObject() {
+        AsyncResponseTransformer<GetObjectResponse, ResponseBytes<GetObjectResponse>> transformer =
+            AsyncResponseTransformer.toBytes();
+        MultipartDownloaderSubscriber downloaderSubscriber = new MultipartDownloaderSubscriber(
+            s3, GetObjectRequest.builder().bucket(bucket).key("128MB").build());
+
+        SplitAsyncResponseTransformer<GetObjectResponse, ResponseBytes<GetObjectResponse>> split =
+            transformer.split(1024 * 1024 * 32);
+        split.publisher().subscribe(downloaderSubscriber);
+        ResponseBytes<GetObjectResponse> res = split.preparedFuture().join();
+
+        log.info(() -> "complete");
+        byte[] bytes = res.asByteArray();
+        log.info(() -> String.format("Byte len: %s", bytes.length));
+    }
+
+    // @Test
     void testByteAsyncResponseTransformer() {
         AsyncResponseTransformer<GetObjectResponse, ResponseBytes<GetObjectResponse>> transformer =
             AsyncResponseTransformer.toBytes();
@@ -76,7 +96,7 @@ class MultipartDownloadIntegrationTest {
         assertThat(bytes.length).isEqualTo(fileTestSize * 1024 * 1024);
     }
 
-    @Test
+    // @Test
     void testFileAsyncResponseTransformer() {
         Path path = Paths.get("/Users/olapplin/Develop/tmp/" + key);
         AsyncResponseTransformer<GetObjectResponse, GetObjectResponse> transformer =
@@ -102,6 +122,7 @@ class MultipartDownloadIntegrationTest {
             s3, GetObjectRequest.builder().bucket(bucket).key(key).build());
         SplitAsyncResponseTransformer<GetObjectResponse, ResponsePublisher<GetObjectResponse>> split =
             transformer.split(1024 * 1024 * 32);
+        CountDownLatch latch = new CountDownLatch(1);
         split.publisher().subscribe(downloaderSubscriber);
         split.preparedFuture().whenComplete((res, e) -> {
             log.info(() -> "complete");
@@ -111,13 +132,13 @@ class MultipartDownloadIntegrationTest {
                 @Override
                 public void onSubscribe(Subscription s) {
                     this.subscription = s;
-                    s.request(Long.MAX_VALUE);
+                    s.request(1);
                 }
 
                 @Override
                 public void onNext(ByteBuffer byteBuffer) {
                     log.info(() -> "received " + byteBuffer.remaining());
-                    subscription.request(Long.MAX_VALUE);
+                    subscription.request(1);
                 }
 
                 @Override
@@ -127,14 +148,20 @@ class MultipartDownloadIntegrationTest {
 
                 @Override
                 public void onComplete() {
-
+                    latch.countDown();
                 }
             });
         });
         split.preparedFuture().join();
+        try {
+            latch.await();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
     }
 
-    // @Test
+    @Test
     void testBlockingInputStreamResponseTransformer() {
         AsyncResponseTransformer<GetObjectResponse, ResponseInputStream<GetObjectResponse>> transformer =
             AsyncResponseTransformer.toBlockingInputStream();
