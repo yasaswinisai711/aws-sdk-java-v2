@@ -299,7 +299,9 @@ class GenericS3TransferManager implements S3TransferManager {
         try {
             assertNotUnsupportedArn(downloadRequest.getObjectRequest().bucket(), "download");
 
-            CompletableFuture<ResultT> future = doGetObject(downloadRequest.getObjectRequest(), responseTransformer);
+            CompletableFuture<ResultT> future = s3AsyncClient.getObject(
+                downloadRequest.getObjectRequest(), responseTransformer);
+            // CompletableFuture<ResultT> future = doGetObject(downloadRequest.getObjectRequest(), responseTransformer);
 
             // Forward download cancellation to future
             CompletableFutureUtils.forwardExceptionTo(returnFuture, future);
@@ -341,7 +343,9 @@ class GenericS3TransferManager implements S3TransferManager {
 
             assertNotUnsupportedArn(downloadRequest.getObjectRequest().bucket(), "download");
 
-            CompletableFuture<GetObjectResponse> future = doGetObject(downloadRequest.getObjectRequest(), responseTransformer);
+            // CompletableFuture<GetObjectResponse> future = doGetObject(downloadRequest.getObjectRequest(), responseTransformer);
+            CompletableFuture<GetObjectResponse> future = s3AsyncClient.getObject(
+                downloadRequest.getObjectRequest(), responseTransformer);
 
             // Forward download cancellation to future
             CompletableFutureUtils.forwardExceptionTo(returnFuture, future);
@@ -510,13 +514,13 @@ class GenericS3TransferManager implements S3TransferManager {
         return !s3EndpointResource.region().isPresent();
     }
 
-    // TODO remove once MultipartS3AsyncClient is complete
-    private <ResultT> CompletableFuture<ResultT> doGetObject(
-        GetObjectRequest getObjectRequest, AsyncResponseTransformer<GetObjectResponse, ResultT> asyncResponseTransformer) {
-        S3AsyncClient clientToUse = s3AsyncClient;
-        if (s3AsyncClient instanceof MultipartS3AsyncClient) {
-            clientToUse = (S3AsyncClient) ((DelegatingS3AsyncClient) s3AsyncClient).delegate();
-        }
-        return clientToUse.getObject(getObjectRequest, asyncResponseTransformer);
-    }
+    // // TODO remove once MultipartS3AsyncClient is complete
+    // private <ResultT> CompletableFuture<ResultT> doGetObject(
+    //     GetObjectRequest getObjectRequest, AsyncResponseTransformer<GetObjectResponse, ResultT> asyncResponseTransformer) {
+    //     S3AsyncClient clientToUse = s3AsyncClient;
+    //     if (s3AsyncClient instanceof MultipartS3AsyncClient) {
+    //         clientToUse = (S3AsyncClient) ((DelegatingS3AsyncClient) s3AsyncClient).delegate();
+    //     }
+    //     return clientToUse.getObject(getObjectRequest, asyncResponseTransformer);
+    // }
 }

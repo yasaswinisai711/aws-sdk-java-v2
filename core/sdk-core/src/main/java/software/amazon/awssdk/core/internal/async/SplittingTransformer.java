@@ -19,6 +19,7 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import software.amazon.awssdk.annotations.SdkInternalApi;
@@ -29,6 +30,7 @@ import software.amazon.awssdk.utils.CompletableFutureUtils;
 import software.amazon.awssdk.utils.Logger;
 import software.amazon.awssdk.utils.Validate;
 import software.amazon.awssdk.utils.async.DelegatingBufferingSubscriber;
+import software.amazon.awssdk.utils.async.DelegatingSubscriber;
 import software.amazon.awssdk.utils.async.SimplePublisher;
 
 /**
@@ -92,6 +94,11 @@ public class SplittingTransformer<ResponseT, ResultT> implements SdkPublisher<As
     private final SimplePublisher<ByteBuffer> publisherToUpstream = new SimplePublisher<>();
 
     /**
+     * The amount of bytes currently buffered in the {@code publisherToUpstream}
+     */
+    private final AtomicLong buffered = new AtomicLong(0);
+
+    /**
      * The downstream subscriber that is subscribed to this publisher.
      */
     private Subscriber<? super AsyncResponseTransformer<ResponseT, ResponseT>> downstreamSubscriber;
@@ -107,6 +114,14 @@ public class SplittingTransformer<ResponseT, ResultT> implements SdkPublisher<As
      * This flag stops the current thread from publishing transformers while another thread is already publishing.
      */
     private final AtomicBoolean emitting = new AtomicBoolean(false);
+
+    // private final AtomicLong upstreamDemand = new AtomicLong(0);
+
+    /**
+     * Intermediate subscriber between the upstream subscriber (coming from the split AsyncResponseTransformer) and the
+     * {@code publisherToUpstream} that captures the amount of demand that is requested by the upstream subscriber.
+     */
+    private DemandCapturingSubscriber<ByteBuffer> demandCapturingSubscriber;
 
     private SplittingTransformer(AsyncResponseTransformer<ResponseT, ResultT> upstreamResponseTransformer,
                                  Long maximumBufferSizeInBytes,
@@ -230,6 +245,7 @@ public class SplittingTransformer<ResponseT, ResultT> implements SdkPublisher<As
 
         @Override
         public CompletableFuture<ResponseT> prepare() {
+            log.info(() -> "calling onPrepare on the upstream transformer");
             this.individualFuture = new CompletableFuture<>();
             if (preparedCalled.compareAndSet(false, true)) {
                 CompletableFuture<ResultT> upstreamFuture = upstreamResponseTransformer.prepare();
@@ -248,7 +264,7 @@ public class SplittingTransformer<ResponseT, ResultT> implements SdkPublisher<As
         @Override
         public void onResponse(ResponseT response) {
             if (onResponseCalled.compareAndSet(false, true)) {
-                log.trace(() -> "calling onResponse on the upstream transformer");
+                log.info(() -> "calling onResponse on the upstream transformer");
                 upstreamResponseTransformer.onResponse(response);
             }
             this.response = response;
@@ -260,13 +276,11 @@ public class SplittingTransformer<ResponseT, ResultT> implements SdkPublisher<As
                 return;
             }
             if (onStreamCalled.compareAndSet(false, true)) {
-                log.trace(() -> "calling onStream on the upstream transformer");
-                upstreamResponseTransformer.onStream(upstreamSubscriber -> publisherToUpstream.subscribe(
-                    DelegatingBufferingSubscriber.builder()
-                                                 .maximumBufferInBytes(maximumBufferInBytes)
-                                                 .delegate(upstreamSubscriber)
-                                                 .build()
-                ));
+                log.info(() -> "calling onStream on the upstream transformer");
+                upstreamResponseTransformer.onStream(upstreamSubscriber -> {
+                    demandCapturingSubscriber = new DemandCapturingSubscriber<>(upstreamSubscriber);
+                    publisherToUpstream.subscribe(upstreamSubscriber);
+                });
             }
             publisher.subscribe(new IndividualPartSubscriber<>(this.individualFuture, response));
         }
@@ -307,13 +321,63 @@ public class SplittingTransformer<ResponseT, ResultT> implements SdkPublisher<As
             if (byteBuffer == null) {
                 throw new NullPointerException("onNext must not be called with null byteBuffer");
             }
+            long bytesReceived = byteBuffer.remaining();
+            while (true) {
+                log.info(() -> String.format("upstreamDemand: %s, buffered: %s, received: %s",
+                                             upstreamDemand(),
+                                             buffered.get(),
+                                             bytesReceived));
+
+                // [WIP]
+                // Check if there is upstream demand.
+                // No upstream demand means the subscriber from the AsyncResponseTransformer receiving bytes
+                // has not signaled enough demand for us to send this byte buffer.
+                // We need to either:
+                //   1. Buffer the bytes in the simple publisher if there is buffer place left (smaller than maxBuffer) while
+                //      waiting for demand to increase
+                //   2. If there is no buffer left, wait until the amount of buffered bytes lowers or more demand is signaled.
+                boolean bufferHasSpaceLeft = bytesReceived + buffered.get() < maximumBufferInBytes;
+                if (upstreamDemand() < 1) {
+                    if (bufferHasSpaceLeft) {
+                        sendToUpstream(byteBuffer);
+                        break;
+                    }
+                    continue;
+                }
+
+                // Check for buffer available.
+                // If no buffer space is available, wait for publisherToUpstream to send bytes to upstream subscriber.
+                if (!bufferHasSpaceLeft) {
+                    // edge-case: if we receive a ByteBuffer that itself would be larger than the buffer-size
+                    // we just send it as-is to the upstream. If not, the ByteBuffer would never be processed
+                    if (upstreamDemand() > 0 && byteBuffer.remaining() > maximumBufferInBytes) {
+                        sendToUpstream(byteBuffer);
+                        break;
+                    }
+                    continue;
+                }
+                sendToUpstream(byteBuffer);
+                break;
+            }
+        }
+
+        private long upstreamDemand() {
+            if (demandCapturingSubscriber == null) {
+                return 0;
+            }
+            return demandCapturingSubscriber.demand();
+        }
+
+        private void sendToUpstream(ByteBuffer byteBuffer) {
+            int bytesReceived = byteBuffer.remaining();
+            buffered.addAndGet(bytesReceived);
             publisherToUpstream.send(byteBuffer).whenComplete((r, t) -> {
+                buffered.addAndGet(-bytesReceived);
                 if (t != null) {
                     handleError(t);
-                    return;
                 }
-                subscription.request(1);
             });
+            subscription.request(1);
         }
 
         @Override

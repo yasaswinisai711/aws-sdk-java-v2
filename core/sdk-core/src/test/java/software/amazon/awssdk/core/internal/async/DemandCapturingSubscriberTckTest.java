@@ -15,34 +15,23 @@
 
 package software.amazon.awssdk.core.internal.async;
 
-
-import java.nio.ByteBuffer;
 import java.util.concurrent.CompletableFuture;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import org.reactivestreams.tck.SubscriberWhiteboxVerification;
 import org.reactivestreams.tck.TestEnvironment;
-import software.amazon.awssdk.core.ResponseBytes;
-import software.amazon.awssdk.core.async.AsyncResponseTransformer;
+import software.amazon.awssdk.utils.async.SequentialSubscriber;
 
-public class IndividualPartSubscriberTckTest extends SubscriberWhiteboxVerification<ByteBuffer> {
-
-    private static final byte[] DATA = {0, 1, 2, 3, 4, 5, 6, 7};
-
-    protected IndividualPartSubscriberTckTest() {
+class DemandCapturingSubscriberTckTest extends SubscriberWhiteboxVerification<Object> {
+    protected DemandCapturingSubscriberTckTest() {
         super(new TestEnvironment());
     }
 
     @Override
-    public Subscriber<ByteBuffer> createSubscriber(WhiteboxSubscriberProbe<ByteBuffer> probe) {
-        CompletableFuture<ByteBuffer> future = new CompletableFuture<>();
-        SplittingTransformer<Object, ResponseBytes<Object>> transformer =
-            SplittingTransformer.<Object, ResponseBytes<Object>>builder()
-                                .upstreamResponseTransformer(AsyncResponseTransformer.toBytes())
-                                .maximumBufferSizeInBytes(1024L*16)
-                                .resultFuture(new CompletableFuture<>())
-                                .build();
-        return transformer.new IndividualPartSubscriber<ByteBuffer>(future, ByteBuffer.wrap(new byte[0])) {
+    public Subscriber<Object> createSubscriber(WhiteboxSubscriberProbe<Object> probe) {
+        Subscriber<Object> delegate = new SequentialSubscriber<>(o -> {
+        }, new CompletableFuture<>());
+        return new DemandCapturingSubscriber<Object>(delegate) {
             @Override
             public void onSubscribe(Subscription s) {
                 super.onSubscribe(s);
@@ -60,7 +49,7 @@ public class IndividualPartSubscriberTckTest extends SubscriberWhiteboxVerificat
             }
 
             @Override
-            public void onNext(ByteBuffer bb) {
+            public void onNext(Object bb) {
                 super.onNext(bb);
                 probe.registerOnNext(bb);
             }
@@ -81,7 +70,7 @@ public class IndividualPartSubscriberTckTest extends SubscriberWhiteboxVerificat
     }
 
     @Override
-    public ByteBuffer createElement(int element) {
-        return ByteBuffer.wrap(DATA);
+    public Object createElement(int element) {
+        return new Object();
     }
 }

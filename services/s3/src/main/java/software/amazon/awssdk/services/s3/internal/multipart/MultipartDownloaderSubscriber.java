@@ -114,6 +114,7 @@ public class MultipartDownloaderSubscriber implements Subscriber<AsyncResponseTr
                 return;
             }
             int totalComplete = completedParts.incrementAndGet();
+            log.info(() -> "completed part " + completedParts.get());
             log.trace(() -> String.format("completed part: %s", totalComplete));
 
             if (eTag == null) {

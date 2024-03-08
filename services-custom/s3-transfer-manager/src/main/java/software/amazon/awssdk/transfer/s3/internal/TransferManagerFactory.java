@@ -66,8 +66,10 @@ public final class TransferManagerFactory {
 
     private static Supplier<S3AsyncClient> defaultS3AsyncClient() {
         if (crtInClasspath()) {
+            log.info(() -> "USING CRT CLIENT");
             return S3AsyncClient::crtCreate;
         }
+        log.info(() -> "USING JAVA CLIENT");
         return () -> S3AsyncClient.builder().multipartEnabled(true).build();
     }
 

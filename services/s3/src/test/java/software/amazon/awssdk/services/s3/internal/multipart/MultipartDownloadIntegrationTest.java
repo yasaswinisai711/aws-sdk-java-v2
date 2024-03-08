@@ -21,39 +21,50 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
-import java.util.Random;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.apache.commons.lang3.RandomUtils;
-import org.checkerframework.checker.units.qual.A;
+import java.util.zip.Checksum;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider;
+import software.amazon.awssdk.core.FileTransformerConfiguration;
 import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.core.ResponseInputStream;
-import software.amazon.awssdk.core.SplittingTransformerConfiguration;
 import software.amazon.awssdk.core.async.AsyncResponseTransformer;
 import software.amazon.awssdk.core.async.ResponsePublisher;
+import software.amazon.awssdk.core.checksums.Algorithm;
+import software.amazon.awssdk.core.checksums.SdkChecksum;
+import software.amazon.awssdk.core.internal.checksums.factory.SdkCrc32;
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
-import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.endpoints.internal.Value;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.testutils.FileUtils;
+import software.amazon.awssdk.utils.BinaryUtils;
 import software.amazon.awssdk.utils.Logger;
+import software.amazon.awssdk.utils.MapUtils;
 
 // TODO(multipart download): remove before release
 // WIP - please ignore for now, only used in manually testing
 class MultipartDownloadIntegrationTest {
     private static final Logger log = Logger.loggerFor(MultipartDownloadIntegrationTest.class);
 
-    static final int fileTestSize = 128;
+    // CHANGE ME TO:
+    //   24
+    // OR
+    //   238
+    static final int fileTestSize = 24;
+
     static final String bucket = "olapplin-test-bucket";
     static final String key = String.format("debug-test-%smb", fileTestSize);
 
@@ -70,7 +81,7 @@ class MultipartDownloadIntegrationTest {
                                .build();
     }
 
-    // @Test
+    @Test
     void testByteAsyncResponseTransformer() {
         CompletableFuture<ResponseBytes<GetObjectResponse>> response = s3.getObject(
             r -> r.bucket(bucket).key(key),
@@ -82,20 +93,20 @@ class MultipartDownloadIntegrationTest {
         assertThat(bytes).hasSize(fileTestSize * 1024 * 1024);
     }
 
-    // @Test
-    void testFileAsyncResponseTransformer() {
-        Path path = Paths.get("/Users/olapplin/Develop/tmp",
-                              LocalDateTime.now().format(DateTimeFormatter.BASIC_ISO_DATE) + '-' + key);
+    @Test
+    void testFileAsyncResponseTransformer() throws Exception {
+        Path path = Paths.get("/Users/olapplin/Develop/tmp", key);
         CompletableFuture<GetObjectResponse> future = s3.getObject(
             r -> r.bucket(bucket).key(key),
-            AsyncResponseTransformer.toFile(path));
-        GetObjectResponse res = future.join();
+            AsyncResponseTransformer.toFile(path,
+                b -> b.fileWriteOption(FileTransformerConfiguration.FileWriteOption.CREATE_OR_REPLACE_EXISTING)
+                    .failureBehavior(FileTransformerConfiguration.FailureBehavior.LEAVE)));
         log.info(() -> "complete");
         assertTrue(path.toFile().exists());
         assertThat(path.toFile()).hasSize(fileTestSize * 1024 * 1024);
     }
 
-    // @Test
+    @Test
     void testPublisherAsyncResponseTransformer() {
         CompletableFuture<ResponsePublisher<GetObjectResponse>> future = s3.getObject(
             r -> r.bucket(bucket).key(key),
@@ -103,6 +114,7 @@ class MultipartDownloadIntegrationTest {
 
         CountDownLatch latch = new CountDownLatch(1);
         AtomicInteger total = new AtomicInteger(0);
+        List<Byte> bytes = new ArrayList<>();
         future.whenComplete((res, e) -> {
             log.info(() -> "complete");
             res.subscribe(new Subscriber<ByteBuffer>() {
@@ -117,9 +129,11 @@ class MultipartDownloadIntegrationTest {
                 @Override
                 public void onNext(ByteBuffer byteBuffer) {
                     total.addAndGet(byteBuffer.remaining());
+                    while (byteBuffer.hasRemaining()) {
+                        bytes.add(byteBuffer.get());
+                    }
                     subscription.request(1);
                 }
-
                 @Override
                 public void onError(Throwable t) {
                     fail("unexpected error in test", t);
@@ -141,17 +155,19 @@ class MultipartDownloadIntegrationTest {
         assertThat(total).hasValue(fileTestSize * 1024 * 1024);
     }
 
-    // @Test
+    @Test
     void testBlockingInputStreamResponseTransformer() {
         CompletableFuture<ResponseInputStream<GetObjectResponse>> future = s3.getObject(
             r -> r.bucket(bucket).key(key),
             AsyncResponseTransformer.toBlockingInputStream());
         ResponseInputStream<GetObjectResponse> res = future.join();
-
+        List<Byte> bytes = new ArrayList<>();
         log.info(() -> "complete");
         int total = 0;
         try {
-            while (res.read() != -1) {
+            int b;
+            while ((b = res.read()) != -1) {
+                bytes.add((byte)b);
                 total++;
             }
         } catch (IOException e) {
@@ -159,4 +175,5 @@ class MultipartDownloadIntegrationTest {
         }
         assertThat(total).isEqualTo(fileTestSize * 1024 * 1024);
     }
+
 }

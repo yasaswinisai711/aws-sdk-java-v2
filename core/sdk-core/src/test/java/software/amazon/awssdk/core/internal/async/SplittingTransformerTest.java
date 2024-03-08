@@ -33,7 +33,6 @@ import software.amazon.awssdk.core.async.SdkPublisher;
 import software.amazon.awssdk.utils.Logger;
 
 class SplittingTransformerTest {
-    private static final Logger log = Logger.loggerFor(SplittingTransformerTest.class);
 
     @Test
     void whenSubscriberCancelSubscription_AllDataSentToTransformer() {
@@ -307,18 +306,16 @@ class SplittingTransformerTest {
 
         @Override
         public CompletableFuture<Object> prepare() {
-            log.info(() -> "[UpstreamTestTransformer] prepare");
             return this.future;
         }
 
         @Override
         public void onResponse(TestResultObject response) {
-            log.info(() -> String.format("[UpstreamTestTransformer] onResponse: %s", response.toString()));
+            // do nothing, test only
         }
 
         @Override
         public void onStream(SdkPublisher<ByteBuffer> publisher) {
-            log.info(() -> "[UpstreamTestTransformer] onStream");
             publisher.subscribe(new Subscriber<ByteBuffer>() {
                 private Subscription subscription;
 
