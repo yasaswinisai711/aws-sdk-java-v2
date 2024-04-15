@@ -44,7 +44,7 @@ import software.amazon.awssdk.utils.Logger;
 
 public abstract class BaseTransferManagerBenchmark implements TransferManagerBenchmark {
 
-    protected static final int WARMUP_ITERATIONS = 10;
+    protected static final int WARMUP_ITERATIONS = 2;
 
     private static final Logger logger = Logger.loggerFor("TransferManagerBenchmark");
 
