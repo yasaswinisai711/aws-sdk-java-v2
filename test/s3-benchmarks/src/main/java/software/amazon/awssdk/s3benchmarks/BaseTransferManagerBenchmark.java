@@ -135,8 +135,9 @@ public abstract class BaseTransferManagerBenchmark implements TransferManagerBen
     }
 
     private void warmUpCopyBatch() {
+        logger.info(() -> "Starting warm up copy");
         List<CompletableFuture<?>> futures = new ArrayList<>();
-        for (int i = 0; i < 5; i++) {
+        for (int i = 0; i < 3; i++) {
             futures.add(transferManager.copy(
                                            c -> c.copyObjectRequest(r -> r.sourceKey(WARMUP_KEY)
                                                                           .sourceBucket(bucket)
@@ -146,11 +147,13 @@ public abstract class BaseTransferManagerBenchmark implements TransferManagerBen
         }
 
         CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0])).join();
+        logger.info(() -> "Done warm up copy");
     }
 
     private void warmUpDownloadBatch() {
+        logger.info(() -> "Starting warm up download");
         List<CompletableFuture<?>> futures = new ArrayList<>();
-        for (int i = 0; i < 20; i++) {
+        for (int i = 0; i < 3; i++) {
             Path tempFile = RandomTempFile.randomUncreatedFile().toPath();
             futures.add(s3.getObject(GetObjectRequest.builder().bucket(bucket).key(WARMUP_KEY).build(),
                                      AsyncResponseTransformer.toFile(tempFile)).whenComplete((r, t) -> runAndLogError(
@@ -158,6 +161,7 @@ public abstract class BaseTransferManagerBenchmark implements TransferManagerBen
         }
 
         CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0])).join();
+        logger.info(() -> "Done warm up download");
     }
 
     private S3AsyncClient createS3AsyncClient(TransferManagerBenchmarkConfig config) {
@@ -193,12 +197,14 @@ public abstract class BaseTransferManagerBenchmark implements TransferManagerBen
     }
 
     private void warmUpUploadBatch() {
+        logger.info(() -> "Starting warm up upload batch");
         List<CompletableFuture<?>> futures = new ArrayList<>();
-        for (int i = 0; i < 20; i++) {
+        for (int i = 0; i < 3; i++) {
             futures.add(s3.putObject(PutObjectRequest.builder().bucket(bucket).key(WARMUP_KEY).build(),
                                      AsyncRequestBody.fromFile(file)));
         }
 
         CompletableFuture.allOf(futures.toArray(new CompletableFuture<?>[0])).join();
+        logger.info(() -> "Done warm up upload");
     }
 }
