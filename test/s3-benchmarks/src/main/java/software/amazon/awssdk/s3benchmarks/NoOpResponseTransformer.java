@@ -26,13 +26,13 @@ import software.amazon.awssdk.utils.Logger;
 /**
  * A no-op {@link AsyncResponseTransformer}
  */
-public class NoOpResponseTransformer<T> implements AsyncResponseTransformer<T, Void> {
+public class NoOpResponseTransformer<T> implements AsyncResponseTransformer<T, Object> {
     private static final Logger log = Logger.loggerFor(NoOpResponseTransformer.class);
 
-    private CompletableFuture<Void> future;
+    private CompletableFuture<Object> future;
 
     @Override
-    public CompletableFuture<Void> prepare() {
+    public CompletableFuture<Object> prepare() {
         log.info(() -> "prepare()");
         future = new CompletableFuture<>();
         return future;
@@ -57,10 +57,10 @@ public class NoOpResponseTransformer<T> implements AsyncResponseTransformer<T, V
     }
 
     static class NoOpSubscriber implements Subscriber<ByteBuffer> {
-        private final CompletableFuture<Void> future;
+        private final CompletableFuture<Object> future;
         private Subscription subscription;
 
-        NoOpSubscriber(CompletableFuture<Void> future) {
+        NoOpSubscriber(CompletableFuture<Object> future) {
             this.future = future;
         }
 
@@ -86,7 +86,7 @@ public class NoOpResponseTransformer<T> implements AsyncResponseTransformer<T, V
         @Override
         public void onComplete() {
             log.info(() -> "onComplete()");
-            future.complete(null);
+            future.complete(new Object());
         }
     }
 
