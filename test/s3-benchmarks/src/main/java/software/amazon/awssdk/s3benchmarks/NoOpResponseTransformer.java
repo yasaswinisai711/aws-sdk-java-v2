@@ -21,31 +21,38 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 import software.amazon.awssdk.core.async.AsyncResponseTransformer;
 import software.amazon.awssdk.core.async.SdkPublisher;
+import software.amazon.awssdk.utils.Logger;
 
 /**
  * A no-op {@link AsyncResponseTransformer}
  */
 public class NoOpResponseTransformer<T> implements AsyncResponseTransformer<T, Void> {
+    private static final Logger log = Logger.loggerFor(NoOpResponseTransformer.class);
+
     private CompletableFuture<Void> future;
 
     @Override
     public CompletableFuture<Void> prepare() {
+        log.info(() -> "prepare()");
         future = new CompletableFuture<>();
         return future;
     }
 
     @Override
     public void onResponse(T response) {
+        log.info(() -> "onResponse()");
         // do nothing
     }
 
     @Override
     public void onStream(SdkPublisher<ByteBuffer> publisher) {
+        log.info(() -> "onStream()");
         publisher.subscribe(new NoOpSubscriber(future));
     }
 
     @Override
     public void exceptionOccurred(Throwable error) {
+        log.info(() -> "exceptionOccurred()");
         future.completeExceptionally(error);
     }
 
@@ -59,22 +66,26 @@ public class NoOpResponseTransformer<T> implements AsyncResponseTransformer<T, V
 
         @Override
         public void onSubscribe(Subscription s) {
+            log.info(() -> "onSubscribe()");
             this.subscription = s;
             subscription.request(Long.MAX_VALUE);
         }
 
         @Override
         public void onNext(ByteBuffer byteBuffer) {
+            log.info(() -> "onNext()");
             subscription.request(1);
         }
 
         @Override
         public void onError(Throwable throwable) {
+            log.info(() -> "onError()");
             future.completeExceptionally(throwable);
         }
 
         @Override
         public void onComplete() {
+            log.info(() -> "onComplete()");
             future.complete(null);
         }
     }
