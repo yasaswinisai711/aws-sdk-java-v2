@@ -20,7 +20,7 @@ import static software.amazon.awssdk.codegen.poet.ClientTestModels.composedClien
 import static software.amazon.awssdk.codegen.poet.ClientTestModels.internalConfigModels;
 import static software.amazon.awssdk.codegen.poet.ClientTestModels.operationWithNoAuth;
 import static software.amazon.awssdk.codegen.poet.ClientTestModels.queryServiceModels;
-import static software.amazon.awssdk.codegen.poet.ClientTestModels.queryServiceModelsEndpointAuthParamsWithAllowList;
+import static software.amazon.awssdk.codegen.poet.ClientTestModels.queryServiceModelWithSpecialCustomization;
 import static software.amazon.awssdk.codegen.poet.ClientTestModels.restJsonServiceModels;
 import static software.amazon.awssdk.codegen.poet.ClientTestModels.serviceWithNoAuth;
 import static software.amazon.awssdk.codegen.poet.builder.BuilderClassTestUtils.validateGeneration;
@@ -64,7 +64,8 @@ public class BaseClientBuilderClassTest {
 
     @Test
     public void baseClientBuilderClassWithEndpointsAuthParams() {
-        validateBaseClientBuilderClassGeneration(queryServiceModelsEndpointAuthParamsWithAllowList(),
+        validateBaseClientBuilderClassGeneration(
+            queryServiceModelWithSpecialCustomization("customization-endpoint-auth-params-with-allowed.config"),
                                                  "test-client-builder-endpoints-auth-params.java");
     }
 
@@ -107,7 +108,7 @@ public class BaseClientBuilderClassTest {
 
     @Test
     void baseClientBuilderClassWithEndpointsAuthParams_sra() {
-        validateBaseClientBuilderClassGeneration(queryServiceModelsEndpointAuthParamsWithAllowList(),
+        validateBaseClientBuilderClassGeneration(queryServiceModelWithSpecialCustomization("customization-endpoint-auth-params-with-allowed.config"),
                                                  "test-client-builder-endpoints-auth-params.java", true);
     }
 

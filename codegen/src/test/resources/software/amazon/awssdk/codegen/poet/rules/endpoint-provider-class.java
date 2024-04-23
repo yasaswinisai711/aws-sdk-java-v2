@@ -81,6 +81,9 @@ public final class DefaultQueryEndpointProvider implements QueryEndpointProvider
         if (params.operationContextParam() != null) {
             paramsMap.put(Identifier.of("operationContextParam"), Value.fromStr(params.operationContextParam()));
         }
+        if (params.customEndpointArray() != null) {
+            paramsMap.put(Identifier.of("CustomEndpointArray"), Value.fromArray(params.customEndpointArray()));
+        }
         return paramsMap;
     }
 
@@ -373,8 +376,13 @@ public final class DefaultQueryEndpointProvider implements QueryEndpointProvider
                                         Parameter.builder().name("stringContextParam").type(ParameterType.fromValue("string"))
                                                 .required(false).build())
                                 .addParameter(
-                                        Parameter.builder().name("operationContextParam").type(ParameterType.fromValue("string"))
-                                                .required(false).build()).build()).addRule(endpointRule_0()).build();
+                                    Parameter.builder().name("operationContextParam").type(ParameterType.fromValue("string"))
+                                             .required(false).build())
+                                .addParameter(
+                                    Parameter.builder().name("CustomEndpointArray")
+                                             .type(ParameterType.fromValue("StringArray")).required(false)
+                                             .documentation("Parameter from the customization config").build()).build())
+                .addRule(endpointRule_0()).build();
     }
 
     @Override

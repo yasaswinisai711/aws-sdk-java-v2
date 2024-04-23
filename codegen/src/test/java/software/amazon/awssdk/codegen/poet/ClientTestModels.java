@@ -128,11 +128,12 @@ public class ClientTestModels {
         return new IntermediateModelBuilder(models).build();
     }
 
-    public static IntermediateModel queryServiceModelsEndpointAuthParamsWithAllowList() {
+    public static IntermediateModel queryServiceModelWithSpecialCustomization(String specialCustomization) {
         File serviceModel = new File(ClientTestModels.class.getResource("client/c2j/query/service-2.json").getFile());
         File customizationModel =
-            new File(ClientTestModels.class.getResource("client/c2j/query/customization-endpoint-auth-params-with-allowed.config")
-                                           .getFile());
+            new File(ClientTestModels.class.getResource("client/c2j/query/"+  specialCustomization).getFile());
+
+
         File waitersModel = new File(ClientTestModels.class.getResource("client/c2j/query/waiters-2.json").getFile());
         File endpointRuleSetModel =
             new File(ClientTestModels.class.getResource("client/c2j/query/endpoint-rule-set.json").getFile());
@@ -151,11 +152,10 @@ public class ClientTestModels {
         return new IntermediateModelBuilder(models).build();
     }
 
-    public static IntermediateModel queryServiceModelsEndpointAuthParamsWithoutAllowList() {
+    public static IntermediateModel queryServiceModelsEndpointAuthParamsWithoutAllowList(String cust) {
         File serviceModel = new File(ClientTestModels.class.getResource("client/c2j/query/service-2.json").getFile());
         File customizationModel =
-            new File(ClientTestModels.class.getResource("client/c2j/query/customization-endpoint-auth-params-without-allowed"
-                                                        + ".config")
+            new File(ClientTestModels.class.getResource("client/c2j/query/customization-endpoint-auth-params-without-allowed.config")
                                            .getFile());
         File waitersModel = new File(ClientTestModels.class.getResource("client/c2j/query/waiters-2.json").getFile());
         File endpointRuleSetModel =

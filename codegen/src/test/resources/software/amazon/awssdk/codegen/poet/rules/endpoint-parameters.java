@@ -38,6 +38,7 @@ public final class QueryEndpointParams implements ToCopyableBuilder<QueryEndpoin
 
     private final String operationContextParam;
 
+    private final List<String> customEndpointArray;
     private QueryEndpointParams(BuilderImpl builder) {
         this.region = builder.region;
         this.useDualStackEndpoint = builder.useDualStackEndpoint;
@@ -51,6 +52,7 @@ public final class QueryEndpointParams implements ToCopyableBuilder<QueryEndpoin
         this.booleanContextParam = builder.booleanContextParam;
         this.stringContextParam = builder.stringContextParam;
         this.operationContextParam = builder.operationContextParam;
+        this.customEndpointArray = builder.customEndpointArray;
     }
 
     public static Builder builder() {
@@ -106,6 +108,10 @@ public final class QueryEndpointParams implements ToCopyableBuilder<QueryEndpoin
         return operationContextParam;
     }
 
+    public List<String> customEndpointArray() {
+        return customEndpointArray;
+    }
+
     public Builder toBuilder() {
         return new BuilderImpl(this);
     }
@@ -136,6 +142,8 @@ public final class QueryEndpointParams implements ToCopyableBuilder<QueryEndpoin
 
         Builder operationContextParam(String operationContextParam);
 
+        Builder customEndpointArray(List<String> customEndpointArray);
+
         QueryEndpointParams build();
     }
 
@@ -164,6 +172,8 @@ public final class QueryEndpointParams implements ToCopyableBuilder<QueryEndpoin
 
         private String operationContextParam;
 
+        private List<String> customEndpointArray;
+
         private BuilderImpl() {
         }
 
@@ -180,6 +190,8 @@ public final class QueryEndpointParams implements ToCopyableBuilder<QueryEndpoin
             this.booleanContextParam = builder.booleanContextParam;
             this.stringContextParam = builder.stringContextParam;
             this.operationContextParam = builder.operationContextParam;
+            this.customEndpointArray = builder.customEndpointArray;
+
         }
 
         @Override
@@ -261,6 +273,12 @@ public final class QueryEndpointParams implements ToCopyableBuilder<QueryEndpoin
         @Override
         public Builder operationContextParam(String operationContextParam) {
             this.operationContextParam = operationContextParam;
+            return this;
+        }
+
+        @Override
+        public Builder customEndpointArray(List<String> customEndpointArray) {
+            this.customEndpointArray = customEndpointArray;
             return this;
         }
 
