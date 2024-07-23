@@ -28,8 +28,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.stream.Stream;
 
+import software.amazon.awssdk.services.sqs.BatchManager.common.BatchManagerTestUtils;
 import software.amazon.awssdk.services.sqs.batchmanager.BatchOverrideConfiguration;
-import software.amazon.awssdk.services.sqs.common.BatchManagerTestUtils;
 import software.amazon.awssdk.services.sqs.internal.batchmanager.RequestsBatchManager;
 import software.amazon.awssdk.services.sqs.internal.batchmanager.ResponsesBatchManager;
 import software.amazon.awssdk.services.sqs.internal.batchmanager.core.BatchAndSend;
@@ -38,8 +38,9 @@ import software.amazon.awssdk.services.sqs.internal.batchmanager.core.BatchManag
 import software.amazon.awssdk.utils.ThreadFactoryBuilder;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static software.amazon.awssdk.services.sqs.common.BatchManagerTestUtils.batchKeyMapper;
-import static software.amazon.awssdk.services.sqs.common.BatchManagerTestUtils.responseMapper;
+import static software.amazon.awssdk.services.sqs.BatchManager.common.BatchManagerTestUtils.batchKeyMapper;
+import static software.amazon.awssdk.services.sqs.BatchManager.common.BatchManagerTestUtils.responseMapper;
+
 
 class BatchManagerBuilderTest {
 
