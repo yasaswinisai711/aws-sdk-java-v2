@@ -16,8 +16,13 @@
 package software.amazon.awssdk;
 
 import com.google.common.io.ByteStreams;
+import com.sun.management.HotSpotDiagnosticMXBean;
+import java.io.IOException;
+import java.lang.management.ManagementFactory;
 import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import javax.management.MBeanServer;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import software.amazon.awssdk.core.ResponseInputStream;
@@ -27,6 +32,8 @@ import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 
 public class ApacheStreamLatencyTest {
+
+    static final String pathToDump = "/Users/olapplin/Develop/tmp/";
 
     static final int MB = 1024 * 1024;
 
@@ -49,18 +56,16 @@ public class ApacheStreamLatencyTest {
                                                       .range("bytes=0-209715199") // 200 MB
                                                       .build();
         ResponseInputStream<GetObjectResponse> ris = s3Client.getObject(getRequest, ResponseTransformer.toInputStream());
-        readBlock(ris, 20 * MB, is -> {
-            System.out.println("ABORT");
-            long startTime = System.nanoTime();
-            try {
-                is.close();
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-            System.out.println("done abort in " + Duration.ofNanos(System.nanoTime() - startTime).toMillis() + "ms");
-            // BytesReadTrackingInputStream bris = (BytesReadTrackingInputStream) is.getAbortable();
-            // System.out.printf("Tracked bytes: %,d%n", bris.bytesRead());
-        });
+        readBlock(ris, 20 * MB);
+
+        System.out.println("CLOSE");
+        long startTime = System.nanoTime();
+        try {
+            ris.close();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        System.out.println("done close in " + Duration.ofNanos(System.nanoTime() - startTime).toMillis() + "ms");
     }
 
     static void doAbort(S3Client s3Client, String client) throws Exception {
@@ -72,26 +77,29 @@ public class ApacheStreamLatencyTest {
                                                       .range("bytes=0-209715199") // 200 MB
                                                       .build();
         ResponseInputStream<GetObjectResponse> ris = s3Client.getObject(getRequest, ResponseTransformer.toInputStream());
-        readBlock(ris, 20 * MB, is -> {
-            System.out.println("CLOSE");
-            long startTime = System.nanoTime();
-            try {
-                is.abort();
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-            System.out.println("done close in " + Duration.ofNanos(System.nanoTime() - startTime).toMillis() + "ms");
-            // BytesReadTrackingInputStream bris = (BytesReadTrackingInputStream) is.getAbortable();
-            // System.out.printf("Tracked bytes: %,d%n", bris.bytesRead());
-
-        }); // 20 mb;
+        readBlock(ris, 20 * MB);
+        System.out.println("ABORT");
+        long startTime = System.nanoTime();
+        try {
+            ris.abort();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        System.out.println("done abort in " + Duration.ofNanos(System.nanoTime() - startTime).toMillis() + "ms");
     }
 
-    static void readBlock(ResponseInputStream<GetObjectResponse> is, int size, Consumer<ResponseInputStream<?>> doWith) throws Exception {
+    static void readBlock(ResponseInputStream<GetObjectResponse> is, int size) throws Exception {
         System.out.println("READING TO BUFFER");
         byte[] megablock = new byte[size];
         ByteStreams.readFully(is, megablock);
-        doWith.accept(is);
+    }
+
+    public static void dumpHeap(String filePath, boolean live) throws IOException {
+        MBeanServer server = ManagementFactory.getPlatformMBeanServer();
+        HotSpotDiagnosticMXBean mxBean = ManagementFactory.newPlatformMXBeanProxy(
+            server, "com.sun.management:type=HotSpotDiagnostic", HotSpotDiagnosticMXBean.class);
+        System.out.println("HEAP DUMP : " + filePath);
+        mxBean.dumpHeap(filePath, live);
     }
 
 }
