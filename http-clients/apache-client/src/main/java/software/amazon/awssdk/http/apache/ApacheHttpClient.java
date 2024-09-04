@@ -23,7 +23,9 @@ import static software.amazon.awssdk.http.HttpMetric.PENDING_CONCURRENCY_ACQUIRE
 import static software.amazon.awssdk.http.apache.internal.conn.ClientConnectionRequestFactory.THREAD_LOCAL_REQUEST_METRIC_COLLECTOR;
 import static software.amazon.awssdk.utils.NumericUtils.saturatedCast;
 
+import java.io.FilterInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.InetAddress;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
@@ -47,7 +49,9 @@ import org.apache.http.config.Registry;
 import org.apache.http.config.RegistryBuilder;
 import org.apache.http.config.SocketConfig;
 import org.apache.http.conn.ConnectionKeepAliveStrategy;
+import org.apache.http.conn.ConnectionReleaseTrigger;
 import org.apache.http.conn.DnsResolver;
+import org.apache.http.conn.EofSensorInputStream;
 import org.apache.http.conn.HttpClientConnectionManager;
 import org.apache.http.conn.routing.HttpRoutePlanner;
 import org.apache.http.conn.socket.ConnectionSocketFactory;
@@ -63,6 +67,7 @@ import org.apache.http.pool.PoolStats;
 import org.apache.http.protocol.HttpRequestExecutor;
 import software.amazon.awssdk.annotations.SdkPublicApi;
 import software.amazon.awssdk.annotations.SdkTestInternalApi;
+import software.amazon.awssdk.http.Abortable;
 import software.amazon.awssdk.http.AbortableInputStream;
 import software.amazon.awssdk.http.ExecutableHttpRequest;
 import software.amazon.awssdk.http.HttpExecuteRequest;
@@ -293,6 +298,22 @@ public final class ApacheHttpClient implements SdkHttpClient {
     private AbortableInputStream toAbortableInputStream(HttpResponse apacheHttpResponse, HttpRequestBase apacheRequest)
             throws IOException {
         return AbortableInputStream.create(apacheHttpResponse.getEntity().getContent(), apacheRequest::abort);
+    }
+
+    private static final class ForceAbortInputStream extends FilterInputStream {
+        private ForceAbortInputStream(InputStream in) {
+            super(in);
+        }
+
+        @Override
+        public void close() throws IOException {
+            System.out.println("!!!!! FORCE ABORT ON CLOSE !!!!");
+            if (in instanceof ConnectionReleaseTrigger) {
+                System.out.println("!!!!! INSTANCEOF ABORTABLE !!!!!");
+                ((ConnectionReleaseTrigger) in).abortConnection();
+            }
+            in.close();
+        }
     }
 
     private ApacheHttpRequestConfig createRequestConfig(DefaultBuilder builder,
