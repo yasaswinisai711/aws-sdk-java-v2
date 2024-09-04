@@ -49,18 +49,19 @@ public class ApacheStreamLatencyTest {
                                                       .range("bytes=0-209715199") // 200 MB
                                                       .build();
         ResponseInputStream<GetObjectResponse> ris = s3Client.getObject(getRequest, ResponseTransformer.toInputStream());
-        readBlock(ris, 20 * MB, is -> {
-            System.out.println("ABORT");
-            long startTime = System.nanoTime();
-            try {
-                is.close();
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-            System.out.println("done abort in " + Duration.ofNanos(System.nanoTime() - startTime).toMillis() + "ms");
-            // BytesReadTrackingInputStream bris = (BytesReadTrackingInputStream) is.getAbortable();
-            // System.out.printf("Tracked bytes: %,d%n", bris.bytesRead());
-        });
+        readBlock(ris, 20 * MB);
+
+        System.out.println("ABORT");
+        long startTime = System.nanoTime();
+        try {
+            ris.close();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        System.out.println("done abort in " + Duration.ofNanos(System.nanoTime() - startTime).toMillis() + "ms");
+        // BytesReadTrackingInputStream bris = (BytesReadTrackingInputStream) is.getAbortable();
+        // System.out.printf("Tracked bytes: %,d%n", bris.bytesRead());
+
     }
 
     static void doAbort(S3Client s3Client, String client) throws Exception {
@@ -72,26 +73,24 @@ public class ApacheStreamLatencyTest {
                                                       .range("bytes=0-209715199") // 200 MB
                                                       .build();
         ResponseInputStream<GetObjectResponse> ris = s3Client.getObject(getRequest, ResponseTransformer.toInputStream());
-        readBlock(ris, 20 * MB, is -> {
-            System.out.println("CLOSE");
-            long startTime = System.nanoTime();
-            try {
-                is.abort();
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-            System.out.println("done close in " + Duration.ofNanos(System.nanoTime() - startTime).toMillis() + "ms");
-            // BytesReadTrackingInputStream bris = (BytesReadTrackingInputStream) is.getAbortable();
-            // System.out.printf("Tracked bytes: %,d%n", bris.bytesRead());
-
-        }); // 20 mb;
+        readBlock(ris, 20 * MB);
+        System.out.println("CLOSE");
+        long startTime = System.nanoTime();
+        try {
+            ris.abort();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        System.out.println("done close in " + Duration.ofNanos(System.nanoTime() - startTime).toMillis() + "ms");
+        // BytesReadTrackingInputStream bris = (BytesReadTrackingInputStream) is.getAbortable();
+        // System.out.printf("Tracked bytes: %,d%n", bris.bytesRead());
     }
 
-    static void readBlock(ResponseInputStream<GetObjectResponse> is, int size, Consumer<ResponseInputStream<?>> doWith) throws Exception {
+
+    static void readBlock(ResponseInputStream<GetObjectResponse> is, int size) throws Exception {
         System.out.println("READING TO BUFFER");
         byte[] megablock = new byte[size];
         ByteStreams.readFully(is, megablock);
-        doWith.accept(is);
     }
 
 }
