@@ -36,7 +36,7 @@ public class CoffeeExample {
     int boilWater(int milliliters) throws InterruptedException {
         System.out.printf("[boil] starting to boil %s ml of water%n", milliliters);
         if (kettleBroken) {
-            throw new RuntimeException("Kettle Broken :(");
+            throw new CoffeeBrewException("Kettle Broken :(");
         }
         for (int i = 0; i < 10; i++) {
             System.out.printf("[boil] getting hotter %s%n", ".".repeat(i));
@@ -91,7 +91,9 @@ public class CoffeeExample {
 
             scope.fork(() -> dumpThreadAfter(
                 Duration.ofSeconds(2),
-                "/Users/olapplin/Develop/GitHub/aws-sdk-java-v2/structured-concurrency/thread-dump.json"));
+                String.format(
+                    "/Users/olapplin/Develop/GitHub/aws-sdk-java-v2/structured-concurrency/thread-dump-%s.json",
+                           System.currentTimeMillis())));
 
             // Wait for both forked tasks to finish while they run in parallel.
             // Because ShutdownOnFailure is used, automatically shutdown the scope if any subtask fails.
@@ -107,7 +109,7 @@ public class CoffeeExample {
             System.out.printf("[main] bean task was %s%n", beanTask.state());
 
             // Note: the JEP recommends only the shutdown policy to access Subtask API, and instead
-            // Use
+            // use Supplier as the fork return type.
 
             // if any task failed before, get() would throw a IllegalStateException
             int water = waterTask.get();
@@ -133,6 +135,9 @@ public class CoffeeExample {
     private static class CoffeeBrewException extends RuntimeException {
         public CoffeeBrewException(String message, Throwable cause) {
             super(message, cause);
+        }
+        public CoffeeBrewException(String message) {
+            super(message);
         }
     }
 
