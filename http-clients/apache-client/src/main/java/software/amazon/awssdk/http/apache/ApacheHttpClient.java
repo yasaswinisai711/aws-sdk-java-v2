@@ -671,7 +671,7 @@ public final class ApacheHttpClient implements SdkHttpClient {
         }
     }
 
-    private static class ApacheConnectionManagerFactory {
+    public static class ApacheConnectionManagerFactory {
 
         public HttpClientConnectionManager create(ApacheHttpClient.DefaultBuilder configuration,
                                                   AttributeMap standardOptions) {
@@ -700,13 +700,13 @@ public final class ApacheHttpClient implements SdkHttpClient {
                                                                     getHostNameVerifier(standardOptions)));
         }
 
-        private HostnameVerifier getHostNameVerifier(AttributeMap standardOptions) {
+        public static HostnameVerifier getHostNameVerifier(AttributeMap standardOptions) {
             return standardOptions.get(SdkHttpConfigurationOption.TRUST_ALL_CERTIFICATES)
                    ? NoopHostnameVerifier.INSTANCE
                    : SSLConnectionSocketFactory.getDefaultHostnameVerifier();
         }
 
-        private SSLContext getSslContext(AttributeMap standardOptions) {
+        public static SSLContext getSslContext(AttributeMap standardOptions) {
             Validate.isTrue(standardOptions.get(SdkHttpConfigurationOption.TLS_TRUST_MANAGERS_PROVIDER) == null ||
                             !standardOptions.get(SdkHttpConfigurationOption.TRUST_ALL_CERTIFICATES),
                             "A TlsTrustManagerProvider can't be provided if TrustAllCertificates is also set");

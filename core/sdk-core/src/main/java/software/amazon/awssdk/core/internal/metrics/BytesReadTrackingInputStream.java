@@ -21,9 +21,11 @@ import software.amazon.awssdk.annotations.SdkInternalApi;
 import software.amazon.awssdk.core.io.SdkFilterInputStream;
 import software.amazon.awssdk.http.Abortable;
 import software.amazon.awssdk.http.AbortableInputStream;
+import software.amazon.awssdk.utils.Logger;
 
 @SdkInternalApi
 public final class BytesReadTrackingInputStream extends SdkFilterInputStream implements Abortable {
+    private static final Logger log = Logger.loggerFor(BytesReadTrackingInputStream.class);
     private final Abortable abortableIs;
     private final AtomicLong bytesRead;
 
@@ -72,7 +74,14 @@ public final class BytesReadTrackingInputStream extends SdkFilterInputStream imp
     }
 
     @Override
+    public void close() throws IOException {
+        log.warn(() -> "!!!!!!!!!! bytesRead:" + bytesRead());
+        super.close();
+    }
+
+    @Override
     public void abort() {
+        log.warn(() -> "!!!!!!!!!! bytesRead:" + bytesRead());
         abortableIs.abort();
     }
 }

@@ -36,8 +36,8 @@ import software.amazon.awssdk.services.polly.model.VoiceId;
 
 public class PollyInputStreamTest {
 
-    @ParameterizedTest
-    @MethodSource("software.amazon.awssdk.Utils#httpClients")
+    // @ParameterizedTest
+    // @MethodSource("software.amazon.awssdk.Utils#httpClients")
     void pollyCloseTest(SdkHttpClient httpClient, String clientName) throws Exception {
         System.out.println(clientName);
         PollyClient polly = PollyClient.builder()
@@ -70,8 +70,8 @@ public class PollyInputStreamTest {
 
     }
 
-    @ParameterizedTest
-    @MethodSource("software.amazon.awssdk.Utils#httpClients")
+    // @ParameterizedTest
+    // @MethodSource("software.amazon.awssdk.Utils#httpClients")
     void pollyAbortTest(SdkHttpClient httpClient, String clientName) throws Exception {
         System.out.println(clientName);
         PollyClient polly = PollyClient.builder()

@@ -15,7 +15,13 @@
 
 package software.amazon.awssdk;
 
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.util.stream.Stream;
+import org.apache.http.HttpHost;
+import org.apache.http.conn.socket.ConnectionSocketFactory;
+import org.apache.http.protocol.HttpContext;
 import org.junit.jupiter.params.provider.Arguments;
 import software.amazon.awssdk.http.apache.ApacheHttpClient;
 import software.amazon.awssdk.http.crt.AwsCrtHttpClient;
@@ -50,7 +56,9 @@ public class Utils {
 
     public static Stream<Arguments> apache() {
         return Stream.of(
-            Arguments.of(S3Client.builder().region(Region.US_WEST_2).httpClient(ApacheHttpClient.create()).build(),
+            Arguments.of(S3Client.builder().region(Region.US_WEST_2).httpClient(
+                ApacheHttpClient.builder()
+                                .build()).build(),
                          "=== APACHE CLIENT ===")
         );
     }
@@ -68,5 +76,17 @@ public class Utils {
                          "=== CRT CLIENT ===")
         );
 
+    }
+
+    private static class DebugSocketFactory implements ConnectionSocketFactory {
+        @Override
+        public Socket createSocket(HttpContext context) throws IOException {
+            return null;
+        }
+
+        @Override
+        public Socket connectSocket(int connectTimeout, Socket sock, HttpHost host, InetSocketAddress remoteAddress, InetSocketAddress localAddress, HttpContext context) throws IOException {
+            return null;
+        }
     }
 }
