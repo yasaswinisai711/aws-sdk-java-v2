@@ -24,7 +24,7 @@ import java.util.zip.Checksum;
 import org.junit.Test;
 import software.amazon.awssdk.core.checksums.Algorithm;
 import software.amazon.awssdk.core.checksums.SdkChecksum;
-import software.amazon.awssdk.core.internal.checksums.factory.CrtBasedChecksumProvider;
+import software.amazon.awssdk.core.internal.checksums.factory.ChecksumProvider;
 import software.amazon.awssdk.crt.checksums.CRC32;
 import software.amazon.awssdk.crt.checksums.CRC32C;
 import software.amazon.awssdk.utils.BinaryUtils;
@@ -35,13 +35,13 @@ public class CrtBasedChecksumTest {
 
     @Test
     public void crtBasedCrc32ChecksumValues(){
-        Checksum checksum = CrtBasedChecksumProvider.createCrc32();
+        Checksum checksum = ChecksumProvider.createCrc32();
         assertThat(checksum).isNotNull().isInstanceOf(CRC32.class);
     }
 
     @Test
     public void crtBasedCrc32_C_ChecksumValues(){
-        Checksum checksum = CrtBasedChecksumProvider.createCrc32C();
+        Checksum checksum = ChecksumProvider.createCrtCrc32C();
         assertThat(checksum).isNotNull().isInstanceOf(CRC32C.class);
     }
 

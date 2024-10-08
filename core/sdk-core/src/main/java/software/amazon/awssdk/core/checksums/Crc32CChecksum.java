@@ -21,7 +21,7 @@ import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.zip.Checksum;
 import software.amazon.awssdk.annotations.SdkInternalApi;
-import software.amazon.awssdk.core.internal.checksums.factory.CrtBasedChecksumProvider;
+import software.amazon.awssdk.core.internal.checksums.factory.ChecksumProvider;
 import software.amazon.awssdk.core.internal.checksums.factory.SdkCrc32C;
 
 /**
@@ -38,12 +38,16 @@ public class Crc32CChecksum implements SdkChecksum {
      * Creates CRT Based Crc32C checksum if Crt classpath for Crc32c is loaded, else create Sdk Implemented Crc32c
      */
     public Crc32CChecksum() {
-        crc32c = CrtBasedChecksumProvider.createCrc32C();
+        crc32c = ChecksumProvider.createCrtCrc32C();
         isCrtBasedChecksum = crc32c != null;
         if (!isCrtBasedChecksum) {
-            crc32c = SdkCrc32C.create();
+            crc32c = ChecksumProvider.createJavaCrc32C();
+            if (crc32c == null) {
+                crc32c = SdkCrc32C.create();
+            }
         }
     }
+
 
     @Override
     public byte[] getChecksumBytes() {

@@ -1,0 +1,6 @@
+{
+    "type": "feature",
+    "category": "AWS SDK for Java v2",
+    "contributor": "",
+    "description": "Added support for SDK to use CRC32 implementation from Java util, and CRC32C from Java util if running on Java 9 or higher"
+}
