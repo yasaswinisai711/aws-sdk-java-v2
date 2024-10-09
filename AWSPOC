@@ -1,0 +1,25 @@
+import boto3
+import json
+import time
+from random import randint
+
+kinesis_client = boto3.client('kinesis', region_name='us-east-1')
+
+def put_to_kinesis():
+    while True:
+        # Simulating clickstream data
+        data = {
+            'user_id': str(randint(1000, 9999)),
+            'page': f"/page-{randint(1, 10)}",
+            'timestamp': time.time(),
+            'action': 'click'
+        }
+        kinesis_client.put_record(
+            StreamName='clickstream-data',
+            Data=json.dumps(data),
+            PartitionKey=str(randint(1000, 9999))
+        )
+        print(f"Sent data: {data}")
+        time.sleep(1)
+
+put_to_kinesis()
